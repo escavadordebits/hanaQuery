@@ -1,0 +1,75 @@
+SELECT
+
+
+-- SOLICITAÇÃO --
+T0."DocNum" "Nº Solicitação",
+TO_VARCHAR(T0."DocDate", 'dd/MM/yyyy') "Data Lançamento",
+T2."CardName" "Fornecedor",
+T1."Dscription" "Item",
+T1."Quantity" "Qtde.",
+REPLACE('R$ ' || TO_VARCHAR(T0."DocTotal", '0.00'), '.',',') "Valor",
+T3."OcrName" "Departamento",
+T4."OcrName" "Projeto",
+CASE WHEN T0."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status",
+'' "--->",
+
+-- PEDIDO --
+T5."DocNum" "Nº Pedido",
+TO_VARCHAR(T5."DocDate", 'dd/MM/yyyy') "Data Lançamento",
+T5."CardName" "Fornecedor",
+T6."Dscription" "Item",
+T6."Quantity" "Qtde.",
+REPLACE('R$ ' || TO_VARCHAR(T5."DocTotal", '0.00'), '.',',') "Valor",
+T7."OcrName" "Departamento",
+T8."OcrName" "Projeto",
+CASE WHEN T5."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status",
+'' "--->",
+
+-- RECEBIMENTO DE MERCADORIA -- 
+T10."DocEntry" "Nº Interno",
+T10."DocNum" "Nº Recebimento",
+TO_VARCHAR(T10."DocDate", 'dd/MM/yyyy') "Data Lançamento",
+T9."Dscription" "Item",
+T9."Quantity" "Qtde.",
+REPLACE('R$ ' || TO_VARCHAR(T10."DocTotal", '0.00'), '.',',') "Valor",
+T11."OcrName" "Departamento",
+T12."OcrName" "Projeto",
+CASE WHEN T10."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status",
+'' "--->",
+
+-- NOTA FISCAL --
+T14."DocEntry" "Nº Interno",
+T14."DocNum" "Nº Nota Fiscal",
+TO_VARCHAR(T14."DocDate", 'dd/MM/yyyy') "Data Lançamento",
+T13."Dscription" "Item",
+T13."Quantity" "Qtde.",
+REPLACE('R$ ' || TO_VARCHAR(T14."DocTotal", '0.00'), '.',',') "Valor",
+T15."OcrName" "Departamento",
+T16."OcrName" "Projeto",
+CASE WHEN T14."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status",
+'FIM' "FIM"
+
+
+FROM OPRQ T0
+INNER JOIN PRQ1 T1 ON T0."DocEntry" = T1."DocEntry"
+INNER JOIN OCRD T2 ON T1."LineVendor" = T2."CardCode"
+INNER JOIN OOCR T3 ON T1."OcrCode3" = T3."OcrCode" 
+INNER JOIN OOCR T4 ON T1."OcrCode4" = T4."OcrCode"
+
+LEFT JOIN OPOR T5 ON T1."TrgetEntry" = T5."DocEntry"
+LEFT JOIN POR1 T6 ON T5."DocEntry" = T6."DocEntry" AND T6."LineNum" = T1."LineNum"
+LEFT JOIN OOCR T7 ON T6."OcrCode3" = T7."OcrCode" 
+LEFT JOIN OOCR T8 ON T6."OcrCode4" = T8."OcrCode"
+
+LEFT JOIN PDN1 T9 ON IFNULL(T6."DocEntry",T0."DocEntry") = T9."BaseEntry" AND IFNULL (T6."LineNum", T1."LineNum") = T9."BaseLine" AND T9."BaseType" = IFNULL(T6."ObjType", T0."ObjType")
+LEFT JOIN OPDN T10 ON T9."DocEntry" = T10."DocEntry"
+LEFT JOIN OOCR T11 ON T9."OcrCode3" = T11."OcrCode"
+LEFT JOIN OOCR T12 ON T9."OcrCode4" = T12."OcrCode"
+
+LEFT JOIN PCH1 T13 ON IFNULL(T9."DocEntry",T1."TrgetEntry") = T13."BaseEntry" --AND IFNULL (T9."LineNum", T1."LineNum") = T13."BaseLine" AND T13."BaseType" = IFNULL(T9."ObjType", T0."ObjType")
+LEFT JOIN OPCH T14 ON T13."DocEntry" = T14."DocEntry" 
+LEFT JOIN OOCR T15 ON T13."OcrCode3" = T15."OcrCode" 
+LEFT JOIN OOCR T16 ON T13."OcrCode4" = T16."OcrCode"
+
+
+WHERE T0."DocNum" = [%0]
