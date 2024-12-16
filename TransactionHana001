@@ -1,0 +1,479 @@
+CREATE PROCEDURE SBO_SP_TransactionNotification
+(
+	in object_type nvarchar(30), 				-- SBO Object Type
+	in transaction_type nchar(1),			-- [A]dd, [U]pdate, [D]elete, [C]ancel, C[L]ose
+	in num_of_cols_in_key int,
+	in list_of_key_cols_tab_del nvarchar(255),
+	in list_of_cols_val_tab_del nvarchar(255)
+)
+LANGUAGE SQLSCRIPT
+AS
+-- Return values
+error  int;				-- Result (0 for no error)
+error_message nvarchar (200); 		-- Error string to be displayed
+companyDbIntBank nvarchar(128);
+begin
+
+error := 0;
+error_message := N'Ok';
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+--	ADD	YOUR	CODE	HERE
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+
+-----------------------------------------------
+
+-- Bloqueios Utilização --
+
+-------------------------------------------------------------------------------------------------------------------
+
+-- Pedido de compra
+if :object_type = '22' AND :transaction_type in ('U') then
+	IF (SELECT count(*)FROM POR12 T0
+	WHERE T0."MainUsage" is null and T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+	error := 1;
+	error_message := 'PC - O campo Natureza da Operação deve ser preenchido!';
+	end if;
+end if;
+-------------------------------------------------------------------------------------------------------------------
+IF :object_type = '22' and :transaction_type in ('A','U') then
+	IF (SELECT count(*) FROM POR1 T0 
+	where T0."OcrCode2" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'PC - O campo de Empresa deve ser preenchido!';
+	end if;
+	IF (SELECT count(*) FROM POR1 T0 
+	where T0."OcrCode3" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'PC - O campo de Departamento deve ser preenchido!';
+	end if;
+	IF (SELECT count(*) FROM POR1 T0 
+	where T0."OcrCode4" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'PC - O campo de Projeto deve ser preenchido!';
+	end if;
+	--------
+	/*IF (select COUNT(*) from POR1 t0 
+	inner join OITM t1 on t0."ItemCode"=t1."ItemCode" 
+	AND t0."Dscription"=T1."ItemName" 
+	where t0."DocEntry"= :list_of_cols_val_tab_del)= 0 then 
+		error := 1;
+		error_message := 'PC - O campo de Descrição não deve ser alterado!';
+	end if;
+	-------
+	IF (select COUNT(*) from POR1 t0 inner join OITM t1 on t1."ItemCode" = t0."ItemCode"--bloqueio de pedido de compra sem oferta de compra ou solicitação de compra
+		where t0."DocEntry"= :list_of_cols_val_tab_del AND (t0."BaseEntry" = '0' OR t0."BaseEntry" is null) AND t1."ItemClass" = '2')> 0 then 
+		error := 1;
+		error_message := 'PC - O pedido de compra deve originar de uma oferta de compra!';
+	end if;*/
+	-------
+end if;
+--Oferta de Compra
+/*if :object_type = '540000006' AND :transaction_type in ('A','U') then 
+	IF (select COUNT(*) from pqt1 t0 inner join OITM t1 on t1."ItemCode" = t0."ItemCode"--t0 inner join prq1 t1 on t0."BaseEntry" = t1."DocEntry"  -- bloqueio de oferta de compra sem solicitação de compra
+		where t0."DocEntry"= :list_of_cols_val_tab_del AND (t0."BaseEntry" = '0' OR t0."BaseEntry" is null) AND t1."ItemClass" = '2')> 0 then 
+		error := 1;
+		error_message := 'PC - Oferta de compra deve originar de uma solicitação de compra!';
+	end if;
+	-------
+end if;*/
+-------------------------------------------------------------------------------------------------------------------
+-- Recebimento de Mercadoria
+
+if :object_type = '20' AND :transaction_type in ('A','U') then
+	IF (SELECT count(*)FROM PDN12 T0
+	WHERE T0."MainUsage" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+	error := 1;
+	error_message := 'RC - O campo Natureza da Operação deve ser preenchido!';
+	end if;
+end if;
+
+
+if :object_type in('20') and :transaction_type in ('A','U') then
+
+Declare valor numeric(10,8);
+
+UPDATE T0
+SET T0."U_IPF" = ifnull(T0."U_Atendimento",0)+ifnull(T0."U_Prazo",0)+ifnull(T0."U_Qualidade",0)+ifnull(T0."U_Documentacao",0)+ifnull(T0."U_Quantidade",0)
+FROM OPDN T0
+where T0."DocEntry" = :list_of_cols_val_tab_del;
+
+UPDATE OCRD
+	SET "U_F_QUALIFICACAO" = (select "U_IPF" from OPDN WHERE "DocEntry" = :list_of_cols_val_tab_del)
+    WHERE "CardCode" = (SELECT "CardCode" from OPDN WHERE "DocEntry" = :list_of_cols_val_tab_del);
+
+SELECT
+ifnull(T0."U_Atendimento",0)+ifnull(T0."U_Prazo",0)+ifnull(T0."U_Qualidade",0)+ifnull(T0."U_Documentacao",0)+ifnull(T0."U_Quantidade",0) into valor
+FROM OPDN T0
+where T0."DocEntry" = :list_of_cols_val_tab_del;
+
+if :valor > 1 AND :valor < 10 THEN
+UPDATE OCRD SET "U_F_STATUS_QUALI" = 'ATIVO' WHERE "CardCode" = (SELECT "CardCode" from OPDN WHERE "DocEntry" = :list_of_cols_val_tab_del);
+elseif :valor >= 10 AND :valor < 20 THEN
+UPDATE OCRD SET "U_F_STATUS_QUALI" = 'ADVERTIDO' WHERE "CardCode" = (SELECT "CardCode" from OPDN WHERE "DocEntry" = :list_of_cols_val_tab_del);
+elseif :valor >= 20 AND :valor < 40 THEN
+UPDATE OCRD SET "U_F_STATUS_QUALI" = 'SUSPENSO' WHERE "CardCode" = (SELECT "CardCode" from OPDN WHERE "DocEntry" = :list_of_cols_val_tab_del);
+else 
+UPDATE OCRD SET "U_F_STATUS_QUALI" = 'DESQUALIFICADO' WHERE "CardCode" = (SELECT "CardCode" from OPDN WHERE "DocEntry" = :list_of_cols_val_tab_del);
+end if;
+
+end if;
+
+-- Nota Fiscal de Entrada
+ if :object_type = '18' AND :transaction_type in ('A','U') then
+ 
+	IF (SELECT count(*)FROM PCH12 T0
+	WHERE T0."MainUsage" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+	error := 1;
+	error_message := 'NE - O campo Natureza da Operação deve ser preenchido!';
+	end if;
+end if;
+-------------------------------------------------------------------------------------------
+
+
+IF :object_type = '18' and :transaction_type in ('A','U')  then
+
+Declare qtd_18 int;
+
+	IF (SELECT count(*) FROM PCH1 T0 
+		where (T0."OcrCode2" is null or T0."OcrCode2" = '') AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'NE - O campo de Empresa deve ser preenchido!';
+	end if;
+	
+	IF (SELECT count(*) FROM PCH1 T0 
+		where (T0."OcrCode3" is null or T0."OcrCode3" = '') AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'NE - O campo de Departamento deve ser preenchido!';
+	end if;
+	
+	IF (SELECT count(*) FROM PCH1 T0 
+		where (T0."OcrCode4" is null or T0."OcrCode4" = '') AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'NE - O campo de Projeto deve ser preenchido!';
+		END IF; 
+end if; 
+	
+IF :object_type = '18' and :transaction_type in ('A')  then	
+Declare qtd_18 int;
+	
+	SELECT COUNT ("DocEntry") INTO qtd_18 
+	from OPCH where 1=1
+	AND "DocEntry" <> :list_of_cols_val_tab_del 
+	AND "CardCode" = (select MAX("CardCode") from OPCH where "DocEntry" = :list_of_cols_val_tab_del) 
+	AND "Serial" =(select MAX("Serial") from OPCH where "DocEntry" = :list_of_cols_val_tab_del) 
+	AND "CANCELED" = 'N';
+	
+	IF qtd_18 > 0 THEN
+	
+	   error := 1;
+	   error_message := 'NE - Já existe uma Nota Fiscal de Entrada com esse Nº para o mesmo Fornecedor';
+	
+	END IF;
+end if; 
+---------------------------------------------------------------------------------------------
+-- Pedido de Venda
+if :object_type = '17' AND :transaction_type in ('A','U') then
+	IF (SELECT count(*)FROM RDR12 T0
+		WHERE T0."MainUsage" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'PV - O campo Natureza da Operação deve ser preenchido!';
+	end if;
+end if;
+--------------------------------------------------------------------------------------------
+
+IF :object_type = '17' and :transaction_type in ('A','U') then
+	IF (SELECT count(*) FROM RDR1 T0 
+		where T0."OcrCode2" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'PV - O campo de Empresa deve ser preenchido!';
+	end if;
+	IF (SELECT count(*) FROM RDR1 T0 
+		where T0."OcrCode3" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'PV - O campo de Departamento deve ser preenchido!';
+	end if;
+	IF (SELECT count(*) FROM RDR1 T0 
+		where T0."OcrCode4" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'PV - O campo de Projeto deve ser preenchido!';
+	end if;
+end if;
+
+---------------------------------------------------------------------------------------------
+
+IF :object_type = '13' and :transaction_type in ('A','U')  then
+	
+	error_message := 'NS - O campo de Empresa deve ser preenchido!';
+	IF (SELECT count(*) FROM INV1 T0 
+		where (T0."OcrCode2" is null or T0."OcrCode2" = '') AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'NS - O campo de Empresa deve ser preenchido!';
+	end if;
+	
+	IF (SELECT count(*) FROM INV1 T0 
+		where (T0."OcrCode3" is null or T0."OcrCode3" = '') AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'NS - O campo de Departamento deve ser preenchido!';
+	end if;
+	
+	IF (SELECT count(*) FROM INV1 T0 
+		where (T0."OcrCode4" is null or T0."OcrCode4" = '') AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'NS - O campo de Projeto deve ser preenchido!';
+	end if;
+	IF (SELECT count(*)FROM INV12 T0
+		WHERE T0."MainUsage" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'NS - O campo Natureza da Operação deve ser preenchido!';
+	end if;
+end if;
+---------------------------------------------------------------------------------------------
+IF :object_type = '204' and :transaction_type in ('A','U')  then
+	IF (SELECT count(*) FROM DPO1 T0 
+		where T0."OcrCode2" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'ADT - O campo de Empresa deve ser preenchido!';
+	end if;
+	IF (SELECT count(*) FROM DPO1 T0 
+		where T0."OcrCode3" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'ADT - O campo de Departamento deve ser preenchido!';
+	end if;
+	IF (SELECT count(*) FROM DPO1 T0 
+		where T0."OcrCode4" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'ADT - O campo de Projeto deve ser preenchido!';
+	end if;
+end if;
+---------------------------------------------
+IF :object_type = '203' and :transaction_type in ('A','U')  then
+	IF (SELECT count(*) FROM DPI1 T0 
+		where T0."OcrCode2" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'ADT - O campo de Empresa deve ser preenchido!';
+	end if;
+	IF (SELECT count(*) FROM DPI1 T0 
+		where T0."OcrCode3" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'ADT - O campo de Departamento deve ser preenchido!';
+	end if;
+	IF (SELECT count(*) FROM DPI1 T0 
+		where T0."OcrCode4" is null AND T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'ADT - O campo de Projeto deve ser preenchido!';
+	end if;
+end if;
+---------------------------------------------
+
+-- SOLICITACAO DE COMPRA --
+
+---------------------------------------------
+
+/* Não permitir campo Departamento em branco */
+
+if :object_type = '1470000113' AND :transaction_type in ('A','U') then
+
+	IF (SELECT count(*)FROM OPRQ T0 INNER JOIN PRQ1 T1 ON T0."DocEntry" = T1."DocEntry"
+	WHERE (T1."OcrCode3" is null OR T1."OcrCode3" = '') AND  T0."DocEntry" = :list_of_cols_val_tab_del 
+	and T0."CANCELED"  NOT IN ('Y','C') 
+	and T0."ObjType" = '1470000113'
+	AND (
+			T1."AcctCode" LIKE '3%'
+			OR T1."AcctCode" LIKE '4%'
+			OR T1."AcctCode" LIKE '5%'
+	))>0 then
+	error := 1;
+	error_message := 'SCE002 - O campo Centro de Custo Departamento deve ser preenchido!';
+	end if;
+	
+	IF (SELECT count(*)FROM OPRQ T0 INNER JOIN PRQ1 T1 ON T0."DocEntry" = T1."DocEntry"
+	WHERE (T1."OcrCode4" is null OR T1."OcrCode4" = '') AND  T0."DocEntry" = :list_of_cols_val_tab_del 
+	and T0."CANCELED"  NOT IN ('Y','C') 
+	and T0."ObjType" = '1470000113'
+	AND (
+			T1."AcctCode" LIKE '3%'
+			OR T1."AcctCode" LIKE '4%'
+			OR T1."AcctCode" LIKE '5%'
+	))>0 then
+	error := 1;
+	error_message := 'SCE002 - O campo Centro de Custo Projeto deve ser preenchido!';
+	end if;
+	
+end if;
+
+----------------------------------------------
+
+-- OFERTA DE COMPRA --
+
+----------------------------------------------
+
+/* Não permitir campo Departamento em branco */
+
+if :object_type = '540000006' AND :transaction_type in ('A','U') then
+
+	IF (SELECT count(*)FROM PQT1 T0 
+		LEFT JOIN OPQT T1 on T1."DocEntry" = T0."DocEntry"
+		WHERE (T0."OcrCode3" is null OR T0."OcrCode3" = '')  AND T1."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'OC001 - O campo Departamento deve ser preenchido!';
+	end if;
+	
+end if;
+
+-----------------------------------------------
+
+-- PEDIDO DE COMPRA --
+
+------------------------------------------------
+
+/* Não permitir campo Departamento em branco */
+
+if :object_type = '22' AND :transaction_type in ('A','U') then
+
+-------- Criado por Luiz Martins em 05/01/2024
+	/*IF (select COUNT(*) from POR1 t0 
+		inner join OITM t1 on t0."ItemCode"=t1."ItemCode" 
+		AND t0."Dscription"=T1."ItemName" 
+		where t0."DocEntry"= :list_of_cols_val_tab_del and "InvntItem"='Y')= 0 then 
+		error := 1;
+		error_message := 'PC - O campo de Descrição não deve ser alterado!';
+	end if;*/
+-------- Ajustada por Luiz Martins em 02/02/2024 -- aguardando autorização para liberar
+
+	IF (select COUNT(*) from POR1 t0 
+		inner join OITM t1 on t0."ItemCode"=t1."ItemCode" 
+		where t0."DocEntry"= :list_of_cols_val_tab_del and t0."ItemCode" like 'I000%' and t0."Dscription"<>T1."ItemName" )> 0 then 
+		error := 1;
+		error_message := 'PC - O campo de Descrição não deve ser alterado!';
+	end if;
+	
+end if;
+
+---------------------------------------------------
+
+-- NOTA FISCAL DE ENTRADA --
+
+---------------------------------------------------
+
+/*if :object_type = '18' AND :transaction_type in ('A','U') then
+
+	IF (SELECT count(*)FROM PCH1 T0 
+	LEFT JOIN OPCH T1 on T1."DocEntry" = T0."DocEntry"
+	WHERE (T0."OcrCode3" is null OR T0."OcrCode3" = '')  AND T1."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+	error := 1;
+	error_message := 'NE001 - O campo Departamento deve ser preenchido!';
+	end if;
+	
+end if;*/
+
+-- Ajustado por Luiz Martins em 16/02/2024
+/*if :object_type = '18' AND :transaction_type in ('A','U') then
+
+	IF (SELECT count(*)FROM PCH1 T0 
+	LEFT JOIN OPCH T1 on T1."DocEntry" = T0."DocEntry"
+	INNER JOIN OITM T3 on T3."ItemCode" = T0."ItemCode"
+	WHERE T1."DocEntry" = :list_of_cols_val_tab_del AND (t0."BaseEntry" = '0' OR t0."BaseEntry" is null) AND T3."ItemClass" = '2')> 0 then
+	error := 18;
+	error_message := 'NE002 - Nota deve ter pedido de compra vinculado';
+	end if;
+
+end if;*/
+
+
+---------------------------------------------------
+
+-- [ODRF] - ESBOÇO EM GERAL	--
+
+---------------------------------------------------	
+
+if :object_type in('112') and :transaction_type in ('A','U') then
+
+
+-- SOLICITACAO DE COMPRA
+
+	IF (SELECT count(*)FROM ODRF T0 INNER JOIN DRF1 T1 ON T0."DocEntry" = T1."DocEntry"
+	WHERE (T1."OcrCode3" is null OR T1."OcrCode3" = '') AND  T0."DocEntry" = :list_of_cols_val_tab_del 
+	and T0."CANCELED"  NOT IN ('Y','C') and T0."ObjType" = '1470000113')> 0 then
+	error := 1;
+	error_message := 'SCE001 - O campo Departamento deve ser preenchido!';
+	end if;
+	
+	IF (SELECT count(*)FROM ODRF T0 INNER JOIN DRF1 T1 ON T0."DocEntry" = T1."DocEntry"
+	WHERE (T1."OcrCode4" is null OR T1."OcrCode4" = '') AND  T0."DocEntry" = :list_of_cols_val_tab_del 
+	and T0."CANCELED"  NOT IN ('Y','C') and T0."ObjType" = '1470000113')> 0 then
+	error := 1;
+	error_message := 'SCE002 - O campo Departamento deve ser preenchido!';
+	end if;
+	
+-- OFERTA DE COMPRA
+
+	IF (SELECT count(*)FROM ODRF T0 INNER JOIN DRF1 T1 ON T0."DocEntry" = T1."DocEntry"
+	WHERE (T1."OcrCode3" is null OR T1."OcrCode3" = '') AND  T0."DocEntry" = :list_of_cols_val_tab_del 
+	and T0."CANCELED"  NOT IN ('Y','C') and T0."ObjType" = '540000006')> 0 then
+	error := 1;
+	error_message := 'OCE001 - O campo Departamento deve ser preenchido!';
+	end if;	
+	
+-- PEDIDO DE COMPRA
+
+	/*IF (SELECT count(*)FROM ODRF T0 INNER JOIN DRF1 T1 ON T0."DocEntry" = T1."DocEntry"
+	WHERE (T1."OcrCode3" is null OR T1."OcrCode3" = '') AND  T0."DocEntry" = :list_of_cols_val_tab_del 
+	and T0."CANCELED"  NOT IN ('Y','C') and T0."ObjType" = '22')> 0 then
+	error := 1;
+	error_message := 'PCE001 - O campo Departamento deve ser preenchido!';
+	end if;	*/
+	
+-- NOTA DE ENTRADA
+
+	IF (SELECT count(*)FROM ODRF T0 INNER JOIN DRF1 T1 ON T0."DocEntry" = T1."DocEntry"
+		WHERE (T1."OcrCode3" is null OR T1."OcrCode3" = '') AND  T0."DocEntry" = :list_of_cols_val_tab_del 
+		and T0."CANCELED"  NOT IN ('Y','C') and T0."ObjType" = '18')> 0 then
+		error := 1;
+		error_message := 'NEE001 - O campo Departamento deve ser preenchido!';
+	end if;	
+
+	-- Criado por Luiz Martins em 16/02/2024
+	/*IF (SELECT count(*)FROM ODRF T0 
+	INNER JOIN DRF1 T1 on T1."DocEntry" = T0."DocEntry"
+	INNER JOIN OITM T2 on T2."ItemCode" = T1."ItemCode"
+	WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = '18'AND (t1."BaseEntry" = '0' OR t1."BaseEntry" is null) AND T2."ItemClass" = '2' 
+	)> 0 then
+	error := 18;
+	error_message := 'NE002 - Nota deve ter pedido de compra vinculado';
+	end if;*/
+end if;
+
+-------------------------------------------------------
+-- ENTREGA
+
+if :object_type in('15') and :transaction_type in ('A','U') then
+
+UPDATE T0
+SET T0."U_U_Obs" = case when T1."MainUsage" = 31 then 
+T0."Comments" || '- NAO INCIDENCIA DE ICMS, CONFORME INCISO
+XIV, ARTIGO 47, TITULO VII, LIVRO I, DECRETO 27.427/2000 - RICMS-RJ'
+when T1."MainUsage" = 61 then 
+T0."Comments" || '- NAO INCIDENCIA DE ICMS, CONFORME INCISO XVIII, ARTIGO 47, TITULO VII, LIVRO I, DECRETO 27.427/2000 - RICMS-RJ' 
+end 
+FROM ODLN T0
+Inner join DLN12 T1 on T1."DocEntry" = T0."DocEntry"	
+where T0."DocEntry" = :list_of_cols_val_tab_del;
+end if;
+
+-------------------------------------------------------
+
+
+
+--Start IntegrationBank
+SELECT CURRENT_SCHEMA INTO companyDbIntBank FROM DUMMY;
+Call "IV_IB_TransNotificationValidateIntBank"(companyDbIntBank, companyDbIntBank, 'IV_IB_Setting', 'IV_IB_BillOfExchange', 'IV_IB_BillOfExchangeInstallment', 'IV_IB_CompanyLocal', object_type, transaction_type, list_of_cols_val_tab_del, error, error_message);
+--End IntegrationBank--Start BankPlus
+Call "IV_IB_TransacaoValidacaoPagamentoBankPlus"(companyDbIntBank, object_type, transaction_type, list_of_cols_val_tab_del, error, error_message);
+--End BankPlus
+-- Select the return values
+select :error, :error_message FROM dummy;
+end;
