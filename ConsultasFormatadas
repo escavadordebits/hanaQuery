@@ -1,0 +1,4 @@
+Adicionando dias em consula formatada
+
+
+SELECT ADD_DAYS(To_Date('16/04/2025', 'dd/mm/yyyy'),10 ) as  "DIAS"   FROM DUMMY
