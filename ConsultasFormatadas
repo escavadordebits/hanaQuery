@@ -2,3 +2,7 @@ Adicionando dias em consula formatada
 
 
 SELECT ADD_DAYS(To_Date('16/04/2025', 'dd/mm/yyyy'),10 ) as  "DIAS"   FROM DUMMY
+
+
+DIF DE DATAS
+SELECT DAYS_BETWEEN(TO_DATE(CURRENT_DATE), TO_DATE('2022-01-01')) FROM DUMMY
