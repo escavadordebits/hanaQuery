@@ -1,0 +1,66 @@
+SELECT
+
+-- PEDIDO --
+'Pedido de Compra' as "--->",
+T0."DocNum" "Nº Pedido",
+TO_VARCHAR(T0."DocDate", 'dd/MM/yyyy') "Data Lançamento",
+T0."CardName" "Fornecedor",
+T1."ItemCode" "Item",
+T1."Dscription" "Item",
+T1."Quantity" "Qtde.",
+REPLACE('R$ ' || TO_VARCHAR(T0."DocTotal", '0.00'), '.',',') "Valor",
+T2."OcrName" "Classificacao",
+T3."OcrName" "CC1",
+T4."OcrName" "CC2",
+T15."PrjName",
+CASE WHEN T0."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status",
+
+'Recebimentos' as "--->",
+
+T5."DocEntry" "Nº Recebimento",
+TO_VARCHAR(T5."DocDate", 'dd/MM/yyyy') "Data Lançamento",
+T5."CardName" "Fornecedor",
+T6."ItemCode" "Item",
+T6."Dscription" "Item",
+T6."Quantity" "Qtde.",
+REPLACE('R$ ' || TO_VARCHAR(T5."DocTotal", '0.00'), '.',',') "Valor",
+T2."OcrName" "Classificacao",
+T3."OcrName" "CC1",
+T4."OcrName" "CC2",
+T15."PrjName",
+CASE WHEN T5."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status",
+
+'Notas' as "--->",
+
+T13."DocEntry" "Nº Nota",
+TO_VARCHAR(T13."DocDate", 'dd/MM/yyyy') "Data Lançamento",
+T14."CardName" "Fornecedor",
+T13."ItemCode" "Item",
+T13."Dscription" "Item",
+T13."Quantity" "Qtde.",
+REPLACE('R$ ' || TO_VARCHAR(T14."DocTotal", '0.00'), '.',',') "Valor",
+T2."OcrName" "Classificacao",
+T3."OcrName" "CC1",
+T4."OcrName" "CC2",
+T15."PrjName",
+CASE WHEN T14."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status"
+
+
+
+
+FROM OPOR T0
+INNER JOIN POR1 T1 ON T0."DocEntry" = T1."DocEntry"
+INNER JOIN OOCR T2 ON T1."OcrCode" = T2."OcrCode"
+INNER JOIN OOCR T3 ON T1."OcrCode2" = T3."OcrCode" 
+INNER JOIN OOCR T4 ON T1."OcrCode3" = T4."OcrCode"
+INNER JOIN OPRJ T15 ON T1."Project"=T15."PrjCode"
+
+LEFT JOIN OPDN T5 ON T1."TrgetEntry" = T5."DocEntry"
+LEFT JOIN PDN1 T6 ON T5."DocEntry" = T6."DocEntry" AND T6."LineNum" = T1."LineNum"
+
+
+LEFT JOIN PCH1 T13 ON IFNULL(T6."DocEntry",T1."TrgetEntry") = T13."BaseEntry" 
+AND IFNULL (T6."LineNum", T1."LineNum") = T13."BaseLine" AND T13."BaseType" = IFNULL(T6."ObjType", T0."ObjType")
+LEFT JOIN OPCH T14 ON T13."DocEntry" = T14."DocEntry"
+
+Order By T1."LineNum"
