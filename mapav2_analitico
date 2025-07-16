@@ -1,0 +1,92 @@
+SELECT
+
+-- PEDIDO --
+'Pedido de Compra' as "--->",
+T0."DocNum" "Nº Pedido",
+REPLACE('R$ ' || TO_VARCHAR(T0."DocTotal", '0.00'), '.',',') "Total Pedido",
+T0."DocCur" as "Moeda do Pedido",
+T0."DocTotalFC" aS "Total Pedido ME",
+TO_VARCHAR(T0."DocDate", 'dd/MM/yyyy') "Data Pedido",
+CASE WHEN T0."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status",
+T14."DocNum" "Nº Nota Fiscal",
+REPLACE('R$ ' || TO_VARCHAR(T14."DocTotal", '0.00'), '.',',') "Total Nota Fiscal",
+TO_VARCHAR(T13."DocDate", 'dd/MM/yyyy') "Data Nota Fiscal",
+T1."ItemCode" "Item",
+T1."Dscription" "Item",
+T1."Quantity" "Qtde.",
+T2."OcrCode" "D1",
+T2."OcrName" "Dimensão 1",
+T3."OcrCode" as "D2",
+T3."OcrName" "Dimensão 2",
+T4."OcrCode" as "D 3",
+T4."OcrName" "Dimensão 3",
+T15."PrjCode" as "Projeto",
+T15."PrjName" as "Nome Projeto",
+T0."CardCode" AS "Cod Fornecedor",
+T0."CardName" "Nome Fornecedor",
+T0."BPLId" AS "Cod Filial",
+T0."BPLName" AS "Nome Filial",
+T0."Comments" AS "Histórico Pedido Compra",
+
+'Recebimentos' as "--->",
+
+T5."DocEntry" "Nº Recebimento",
+REPLACE('R$ ' || TO_VARCHAR(T5."DocTotal", '0.00'), '.',',') "Total Recebimento",
+TO_VARCHAR(T5."DocDate", 'dd/MM/yyyy') "Data Lançamento",
+T6."ItemCode" "Item",
+T6."Dscription" "Item",
+T6."Quantity" "Qtde.",
+--T2."OcrName" "Classificacao",
+--T3."OcrCode" as "Cod Dimensão 2",
+--T3."OcrName" "Dimensão 2",
+--T4."OcrCode" as "Cod Dimensão 3",
+--T4."OcrName" "Dimensão 3",
+--T15."PrjCode" as "Projeto",
+--T15."PrjName" as "Nome Projeto",
+--T5."CardCode" AS "Cod Fornecedor",
+--T5."CardName" "Nome Fornecedor",
+CASE WHEN T5."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status",
+--T5."BPLId" AS "Cod Filial",
+--T5."BPLName" AS "Nome Filial",
+T5."Comments" AS "Histórico Recebimento",
+
+'Notas' as "--->",
+T14."DocNum" "Nº Nota Fiscal",
+T13."DocEntry" "Documento",
+REPLACE('R$ ' || TO_VARCHAR(T14."DocTotal", '0.00'), '.',',') "Total Nota Fiscal",
+TO_VARCHAR(T13."DocDate", 'dd/MM/yyyy') "Data Lançamento",
+T13."ItemCode" "Item",
+T13."Dscription" "Item",
+T13."Quantity" "Qtde.",
+--T2."OcrName" "Classificacao",
+--T3."OcrCode" as "Cod Dimensão 2",
+--T3."OcrName" "Dimensão 2",
+--T4."OcrCode" as "Cod Dimensão 3",
+--T4."OcrName" "Dimensão 3",
+--T15."PrjCode" as "Projeto",
+--T15."PrjName" as "Nome Projeto",
+--T14."CardCode" AS "Cod Fornecedor",
+--T14."CardName" "Nome Fornecedor",
+CASE WHEN T14."DocStatus" = 'C' THEN 'Fechado' ELSE 'Aberto' END "Status",
+--T14."BPLId" AS "Cod Filial",
+--T14."BPLName" AS "Nome Filial",
+T14."Comments" AS "Histórico Nota Fiscal"
+
+
+
+FROM OPOR T0
+INNER JOIN POR1 T1 ON T0."DocEntry" = T1."DocEntry"
+INNER JOIN OOCR T2 ON T1."OcrCode" = T2."OcrCode"
+INNER JOIN OOCR T3 ON T1."OcrCode2" = T3."OcrCode" 
+INNER JOIN OOCR T4 ON T1."OcrCode3" = T4."OcrCode"
+INNER JOIN OPRJ T15 ON T1."Project"=T15."PrjCode"
+
+LEFT JOIN OPDN T5 ON T1."TrgetEntry" = T5."DocEntry"
+LEFT JOIN PDN1 T6 ON T5."DocEntry" = T6."DocEntry" AND T6."LineNum" = T1."LineNum"
+
+
+LEFT JOIN PCH1 T13 ON IFNULL(T6."DocEntry",T1."TrgetEntry") = T13."BaseEntry" 
+AND IFNULL (T6."LineNum", T1."LineNum") = T13."BaseLine" AND T13."BaseType" = IFNULL(T6."ObjType", T0."ObjType")
+LEFT JOIN OPCH T14 ON T13."DocEntry" = T14."DocEntry"
+
+Order By T1."LineNum"
