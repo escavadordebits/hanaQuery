@@ -1,0 +1,120 @@
+-- SALDO INICIAL
+SELECT 
+    NULL AS "N° Transação",
+    NULL AS "Data de lançamento",
+    NULL AS "Data do documento",
+    NULL AS "N° NF",
+    'Saldo Inicial >>>' AS "Nome do cliente/fornecedor",
+    NULL AS "Nº do item",
+    NULL AS "Descrição do item",
+    NULL AS "Tipo de Material",
+    NULL AS "Código do depósito",
+    NULL AS "Nome do depósito",
+    NULL AS "Tipo de transação",
+    'Saldo Inicial' AS "Sentido",
+    NULL AS "Quantidade",
+    NULL AS "Valor unitário",
+    SUM(T0."TransValue") AS "Valor total",
+    NULL AS "Quantidade acumulada",
+    -1 AS "Ordenacao"
+FROM OINM T0
+INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+WHERE T1."MatType" IN ('0','1','4','7')
+AND T0."DocDate" < [%0]
+
+UNION ALL
+
+-- TRANSAÇÕES DO PERÍODO
+SELECT 
+    T0."TransNum" AS "N° Transação",
+    TO_DATE(T0."DocDate") AS "Data de lançamento",
+    T0."TaxDate" AS "Data do documento",
+    CASE 
+        WHEN T0."TransType" = '15' THEN CAST(ODLN."Serial" AS VARCHAR)
+        WHEN T0."TransType" = '18' THEN CAST(OPCH."Serial" AS VARCHAR)
+        WHEN T0."TransType" = '20' THEN CAST(OPDN."Serial" AS VARCHAR)
+        WHEN T0."TransType" = '67' THEN 'Doc. Int. ' || CAST(OWTR."DocNum" AS VARCHAR)
+        WHEN T0."TransType" = '21' THEN CAST(ORPD."Serial" AS VARCHAR)
+        WHEN T0."TransType" = '16' THEN CAST(ORDN."Serial" AS VARCHAR)
+        WHEN T0."TransType" = '13' THEN CAST(OINV."Serial" AS VARCHAR)
+        WHEN T0."TransType" = '14' THEN CAST(ORIN."Serial" AS VARCHAR)
+        WHEN T0."TransType" = '19' THEN CAST(ORPC."Serial" AS VARCHAR)
+        WHEN T0."TransType" = '59' THEN 'Doc. Int. ' || CAST(OIGN."DocNum" AS VARCHAR)
+        WHEN T0."TransType" = '60' THEN 'Doc. Int. ' || CAST(OIGE."DocNum" AS VARCHAR)
+        WHEN T0."TransType" = '162' THEN 'Doc. Int. ' || CAST(OMRV."DocNum" AS VARCHAR)
+        WHEN T0."TransType" = '310000001' THEN 'Doc. Int. ' || CAST(OIQI."DocNum" AS VARCHAR)
+        WHEN T0."TransType" = '10000071' THEN 'Doc. Int. ' || CAST(OIQR."DocNum" AS VARCHAR)
+        ELSE 'Não aplicável'
+    END AS "N° NF",
+    CASE 
+        WHEN T0."TransType" IN ('59','60','162','310000001','10000071') THEN 'QUALITECH INSPECAO, REPARO E MANUTENCAO LTDA'
+        WHEN T0."TransType" = '67' AND (COALESCE(T0."CardName",'')='') THEN 'QUALITECH INSPECAO, REPARO E MANUTENCAO LTDA'
+        ELSE COALESCE(T0."CardName",'Não informado')
+    END AS "Nome do cliente/fornecedor",
+    T0."ItemCode" AS "Nº do item",
+    T1."ItemName" AS "Descrição do item",
+    CASE 
+        WHEN T1."MatType" = '0' THEN 'Mercadoria para Revenda'
+        WHEN T1."MatType" = '1' THEN 'Matéria-Prima'
+        WHEN T1."MatType" = '4' THEN 'Produto Acabado'
+        WHEN T1."MatType" = '7' THEN 'Material de Uso e Consumo'
+        ELSE 'Não definido'
+    END AS "Tipo de Material",
+    T0."Warehouse" AS "Código do depósito",
+    OWHS."WhsName" AS "Nome do depósito",
+    CAST(T0."TransType" AS VARCHAR) AS "Tipo de transação",
+    CASE 
+        WHEN T0."InQty" > 0 THEN 'Entrada'
+        WHEN T0."OutQty" > 0 THEN 'Saída'
+        ELSE 'Reavaliação'
+    END AS "Sentido",
+    (T0."InQty" - T0."OutQty") AS "Quantidade",
+    CASE 
+        WHEN T0."OutQty" > 0 THEN -1 * T0."CalcPrice"
+        ELSE T0."CalcPrice"
+    END AS "Valor unitário",
+    T0."TransValue" AS "Valor total",
+    SUM(T0."InQty"-T0."OutQty") OVER(
+        PARTITION BY T0."ItemCode",T0."Warehouse"
+        ORDER BY T0."DocDate",T0."DocTime"
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS "Quantidade acumulada",
+    0 AS "Ordenacao"
+FROM OINM T0
+INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+LEFT JOIN OWHS ON T0."Warehouse" = OWHS."WhsCode"
+LEFT JOIN ODLN ON ODLN."DocEntry" = T0."CreatedBy" AND T0."TransType"='15'
+LEFT JOIN OPCH ON OPCH."DocEntry" = T0."CreatedBy" AND T0."TransType"='18'
+LEFT JOIN OPDN ON OPDN."DocEntry" = T0."CreatedBy" AND T0."TransType"='20'
+LEFT JOIN OWTR ON OWTR."DocEntry" = T0."CreatedBy" AND T0."TransType"='67'
+LEFT JOIN ORPD ON ORPD."DocEntry" = T0."CreatedBy" AND T0."TransType"='21'
+LEFT JOIN ORDN ON ORDN."DocEntry" = T0."CreatedBy" AND T0."TransType"='16'
+LEFT JOIN OINV ON OINV."DocEntry" = T0."CreatedBy" AND T0."TransType"='13'
+LEFT JOIN ORIN ON ORIN."DocEntry" = T0."CreatedBy" AND T0."TransType"='14'
+LEFT JOIN ORPC ON ORPC."DocEntry" = T0."CreatedBy" AND T0."TransType"='19'
+LEFT JOIN OIGN ON OIGN."DocEntry" = T0."CreatedBy" AND T0."TransType"='59'
+LEFT JOIN OIGE ON OIGE."DocEntry" = T0."CreatedBy" AND T0."TransType"='60'
+LEFT JOIN OMRV ON OMRV."DocEntry" = T0."CreatedBy" AND T0."TransType"='162'
+LEFT JOIN OIQI ON OIQI."DocEntry" = T0."CreatedBy" AND T0."TransType"='310000001'
+LEFT JOIN OIQR ON OIQR."DocEntry" = T0."CreatedBy" AND T0."TransType"='10000071'
+WHERE T1."MatType" IN ('0','1','4','7')
+AND T0."DocDate" BETWEEN [%0] AND [%1]
+
+UNION ALL
+
+-- TOTAL FINAL
+SELECT 
+    NULL,NULL,NULL,NULL,
+    'Total >>>',
+    NULL,NULL,NULL,NULL,NULL,
+    NULL,'Total >>>',
+    NULL,NULL,
+    SUM(T0."TransValue") AS "Valor total",
+    NULL,
+    1 AS "Ordenacao"
+FROM OINM T0
+INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+WHERE T1."MatType" IN ('0','1','4','7')
+AND T0."DocDate" <= [%1]
+
+ORDER BY "Ordenacao","Data de lançamento","N° Transação","Nº do item","Código do depósito";
