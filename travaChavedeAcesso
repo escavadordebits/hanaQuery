@@ -1,0 +1,16 @@
+IF ((:object_type = '18') AND (:transaction_type <> 'D')) THEN
+
+	
+			IF (( select Length(Replace(t0."U_ChaveAcesso",' ',''))   from "OPCH" t0 
+			inner join "PCH1" t1 on t1."DocEntry"=t0."DocEntry"
+			inner join "OITM" t2 on t2."ItemCode"=t1."ItemCode"
+			where t2."ItemClass"= '2' and t0."Model" in('54','39','44')
+			and t0."DocEntry" = :list_of_cols_val_tab_del) <> 44 ) 
+		
+			then
+						
+					error_message := 'SAP - Preencher Campo chave de acesso !!  (Contatar o Fiscal)!';
+					error := 18;
+			END IF;
+			
+end if;
