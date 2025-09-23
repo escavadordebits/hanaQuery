@@ -1,0 +1,44 @@
+
+/*
+_____________________________________________________________________________
+¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+¦¦+-----------------------------------------------------------------------+¦¦
+¦¦¦Autor     ¦ Paulo André Moraes                     ¦ Data ¦ 13/07/2016 ¦¦¦
+¦¦+----------+------------------------------------------------------------¦¦¦
+¦¦¦Objeto    ¦ 18 - OPCH             								  ¦¦¦
+¦¦+----------+------------------------------------------------------------¦¦¦
+¦¦¦Uso       ¦ Urca                                                  ¦¦¦
+¦¦+-----------------------------------------------------------------------+¦¦
+¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+Início - Verifica se a nota esta maior que o PC
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+*/
+
+IF ((:object_type = '18') AND (:transaction_type = 'A')) THEN
+
+declare ValorNota Decimal;
+declare ValorPed Decimal;
+
+Select  opch."DocTotal" into ValorNota
+		from opch 
+		where opch."DocEntry"=:list_of_cols_val_tab_del;
+		
+
+Select Top 1 t2."DocTotal" into ValorPed 
+from OPOR t2 
+inner join POR1 t1 on t1."DocEntry"= t2."DocEntry"
+where t1."DocEntry"= (Select MAX("BaseEntry") from PCH1 where "DocEntry"=:list_of_cols_val_tab_del);
+		
+
+IF ((ValorNota-ValorPed)) >= (Select "U_PercExc"  from "@URCA_CONTROLEEX" where "Name" = '18')
+		then		
+			error_message := 'SAP - Valor da nota maior que o pedido!';
+			error := 18;
+		END IF;
+			
+end if;
+
+
+/*
