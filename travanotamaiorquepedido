@@ -29,7 +29,7 @@ Select  opch."DocTotal" into ValorNota
 Select Top 1 t2."DocTotal" into ValorPed 
 from OPOR t2 
 inner join POR1 t1 on t1."DocEntry"= t2."DocEntry"
-where t1."DocEntry"= (Select MAX("BaseEntry") from PCH1 where ifnull("BaseEntry",'')= '' and "DocEntry"=:list_of_cols_val_tab_del);
+where t1."DocEntry"= (Select MAX("BaseEntry") from PCH1 where ifnull("BaseEntry",0)= 0 and "DocEntry"=:list_of_cols_val_tab_del);
 		
 
 IF ((ValorNota-ValorPed)) >= (Select "U_PercExc"  from "@URCA_CONTROLEEX" where "Name" = '18')
@@ -39,6 +39,3 @@ IF ((ValorNota-ValorPed)) >= (Select "U_PercExc"  from "@URCA_CONTROLEEX" where 
 		END IF;
 			
 end if;
-
-
-/*
