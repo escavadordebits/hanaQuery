@@ -1,0 +1,50 @@
+---------------
+--_________________________________________________________________________
+--¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+--¦¦+-----------------------------------------------------------------------+¦¦
+--¦¦¦Autor     ¦ Marcos Eneas                           ¦ Data ¦ 15/09/2025 ¦¦¦
+--¦¦+----------+------------------------------------------------------------¦¦¦
+--¦¦¦Objeto    ¦ 20 - OPDN                								  ¦¦¦
+--¦¦+----------+------------------------------------------------------------¦¦¦
+--¦¦¦Uso       ¦ Urca                                                       ¦¦¦
+--¦¦+-----------------------------------------------------------------------+¦¦
+--¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+--¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+--¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+--Início - Verifica se o recebimento está com chave de acesso correta
+--¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+--*/
+
+IF ((:object_type = '20') AND (:transaction_type <> 'D')) THEN
+
+	
+			IF (( select top 1  Length(Replace(t0."U_ChaveAcesso",' ',''))   from "OPDN" t0 
+			inner join "PDN1" t1 on t1."DocEntry"=t0."DocEntry"
+			inner join "OITM" t2 on t2."ItemCode"=t1."ItemCode"
+			where t2."ItemClass"= '2' and t0."Model" in('54','39','44')
+			and t0."DocEntry" = :list_of_cols_val_tab_del) <> 44 ) 
+			 
+			then
+						
+					error_message := 'SAP - Campo chave de acesso inválida ou com espaços em Branco!!  (Contatar o Fiscal)!';
+					error := 20150925;
+			END IF;
+			
+end if;
+
+IF ((:object_type = '20') AND (:transaction_type <> 'D')) THEN
+
+	
+			IF (( select top 1  Length(t0."U_ChaveAcesso")   from "OPDN" t0 
+			inner join "PDN1" t1 on t1."DocEntry"=t0."DocEntry"
+			inner join "OITM" t2 on t2."ItemCode"=t1."ItemCode"
+			where t2."ItemClass"= '2' and t0."Model" in ('54','39','44')
+			and t0."DocEntry" = :list_of_cols_val_tab_del) <> 44 ) 
+			 
+			then
+						
+					error_message := 'SAP - Campo chave de acesso inválida ou com espaços em Branco!!  (Contatar o Fiscal)!';
+					error := 20150925;
+			END IF;
+			
+end if;
