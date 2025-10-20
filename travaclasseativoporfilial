@@ -1,0 +1,61 @@
+/*
+_____________________________________________________________________________
+¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+¦¦+-----------------------------------------------------------------------+¦¦
+¦¦¦Autor     ¦ Paulo André Moraes                     ¦ Data ¦ 21-08-2025 ¦¦¦
+¦¦+----------+------------------------------------------------------------¦¦¦
+¦¦¦Objeto    ¦ 18 - OPOR             								  ¦¦¦
+¦¦+----------+------------------------------------------------------------¦¦¦
+¦¦¦Uso       ¦ Urca                                                  ¦¦¦
+¦¦+-----------------------------------------------------------------------+¦¦
+¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+Início - Verifica se o item do pedido esta com filial difente no ativo
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+*/
+
+
+if :object_type = '22' AND transaction_type != 'D'  then
+
+	IF (
+		
+		SELECT Count(*)
+		from 
+		OPOR T3
+		INNER JOIN POR1 T1 on T1."DocEntry" = T3."DocEntry"
+		inner JOIN OITM T0 on T0."ItemCode"=T1."ItemCode"
+		inner join OACS T2 on T0."AssetClass"=T2."Code"
+		where T2."BPLId" <> T3."BPLId"
+		and T3."DocEntry" = :list_of_cols_val_tab_del
+		) > 0
+	THEN
+		
+		error_message := 'SAP - Filial do documento diferente da classe do ativo!';
+		error := 18;
+				
+	END IF;
+end if;
+
+
+if :object_type = '112' AND transaction_type != 'D'  then
+
+	IF (
+		
+		SELECT Count(*)
+		from 
+		ODRF T3
+		INNER JOIN DRF1 T1 on T1."DocEntry" = T3."DocEntry"
+		inner JOIN OITM T0 on T0."ItemCode"=T1."ItemCode"
+		inner join OACS T2 on T0."AssetClass"=T2."Code"
+		where T2."BPLId" <> T3."BPLId"
+		and T3."DocEntry" = :list_of_cols_val_tab_del
+		and T3."ObjtType"= '22'
+		) > 0
+	THEN
+		
+		error_message := 'SAP - Filial do documento diferente da classe do ativo!';
+		error := 112;
+				
+	END IF;
+end if;
