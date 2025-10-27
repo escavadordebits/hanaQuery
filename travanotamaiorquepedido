@@ -18,24 +18,17 @@ Início - Verifica se a nota esta maior que o PC
 
 IF ((:object_type = '18') AND (:transaction_type = 'A')) THEN
 
-declare ValorNota Decimal;
-declare ValorPed Decimal;
 
-Select  opch."DocTotal" into ValorNota
-		from opch 
-		where opch."DocEntry"=:list_of_cols_val_tab_del;
-		
-
-Select Top 1 t2."DocTotal" into ValorPed 
-from OPOR t2 
-inner join POR1 t1 on t1."DocEntry"= t2."DocEntry"
-where t1."DocEntry"= (Select MAX("BaseEntry") from PCH1 where ifnull("BaseEntry",0)= 0 and "DocEntry"=:list_of_cols_val_tab_del);
-		
-
-IF ((ValorNota-ValorPed)) >= (Select "U_PercExc"  from "@URCA_CONTROLEEX" where "Name" = '18')
+IF((SELECT T0."DocTotal" - T2."DocTotal"
+FROM OPCH T0  
+INNER JOIN PCH1 T1 ON T0."DocEntry" = T1."DocEntry"
+INNER JOIN OPOR T2 ON T1."BaseEntry" = T2."DocEntry"
+WHERE T0."DocEntry"=:list_of_cols_val_tab_del)) >= (Select "U_PercExc"  from "@URCA_CONTROLEEX" where "Name" = '18')
 		then		
 			error_message := 'SAP - Valor da nota maior que o pedido!';
 			error := 18;
 		END IF;
 			
 end if;
+
+/*
