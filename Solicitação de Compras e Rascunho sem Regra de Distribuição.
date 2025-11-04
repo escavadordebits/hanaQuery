@@ -1,0 +1,23 @@
+
+if :object_type = '1470000113' AND transaction_type = 'A'  then
+	
+	---solicitacao
+	IF (SELECT count(*)FROM PRQ1 T0 where T0."OcrCode2" is null and 
+		 T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'Não pode criar Solic. sem informar a Regra de Distrib.!';
+	end if;
+	IF (SELECT count(*)FROM PRQ1 T0 where T0."OcrCode" is null and 
+		 T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'Não pode criar Solic. sem informar a Regra de Distrib.!';
+	end if;
+	
+		IF (SELECT count(*)FROM PRQ1 T0 where T0."Project" is null and 
+		 T0."DocEntry" = :list_of_cols_val_tab_del)> 0 then
+		error := 1;
+		error_message := 'Não pode criar Solic. sem informar a Regra de Distrib.';
+	end if;
+	
+
+end if;
