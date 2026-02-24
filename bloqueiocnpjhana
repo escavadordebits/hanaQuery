@@ -1,0 +1,17 @@
+-----------------------------------------------------------------------
+-- Bloqueio: Obrigar preenchimento de CNPJ ou CPF na CRD7 (HANA)
+-----------------------------------------------------------------------
+
+IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+    SELECT COUNT(*) INTO cnt_cnpj
+    FROM "OCRD" T0 
+    INNER JOIN "CRD7" T1 ON T0."CardCode" = T1."CardCode"
+    WHERE T0."CardCode" = :list_of_cols_val_tab_del
+    AND (T1."TaxId0" IS NULL OR T1."TaxId0" = '') -- CNPJ
+    AND (T1."TaxId4" IS NULL OR T1."TaxId4" = '') -- CPF;
+
+    IF :cnt_cnpj > 0 THEN
+        error := 1;
+        error_message := 'Erro TN: É obrigatório informar o CNPJ ou CPF no cadastro do PN (Aba Impostos).';
+    END IF;
+END IF;
