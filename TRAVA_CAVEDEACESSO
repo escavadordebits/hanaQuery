@@ -1,0 +1,87 @@
+
+/*
+___________________________________________________________________________
+¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+¦¦+-----------------------------------------------------------------------+¦¦
+¦¦¦Autor     ¦ Paulo André Moraes                     ¦ Data ¦ 24/03/2026 ¦¦¦
+¦¦+----------+------------------------------------------------------------¦¦¦
+¦¦¦Objeto    ¦ Doc Fiscais               				  ¦¦¦
+¦¦+----------+------------------------------------------------------------¦¦¦
+¦¦¦Uso       ¦ Urca                                                       ¦¦¦
+¦¦+-----------------------------------------------------------------------+¦¦
+¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+Início - Verifica se a nota do fornecedor está com chave de acesso correta
+¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯
+*/
+--------------------------------------------------------------------------------------------
+-- VALIDAÇÃO DE CHAVE DE ACESSO (44 DÍGITOS) - UNIFICADA
+-- OBJETOS: 13, 14, 15, 18, 19, 20 | MODELOS: VARIÁVEL | EXCETO: EXTERIOR (EX)
+--------------------------------------------------------------------------------------------
+
+
+IF (:object_type IN ('13', '14', '15', '18', '19', '20') AND :transaction_type IN ('A', 'U')) THEN
+    
+    -- # MANUTENÇÃO: Mantenha as vírgulas no início e no fim da string para busca exata
+    DECLARE MODELOS_VALIDOS NVARCHAR(100) := ',54,26,39,44,';
+
+    -- Bloco COMPRAS (18, 19, 20)
+    IF (:object_type = '18') THEN
+        IF EXISTS (SELECT 1 FROM "OPCH" T0 INNER JOIN "PCH1" T1 ON T0."DocEntry" = T1."DocEntry" LEFT JOIN "PCH12" T12 ON T0."DocEntry" = T12."DocEntry" INNER JOIN "OITM" T2 ON T1."ItemCode" = T2."ItemCode"
+                   WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T2."ItemClass" = '2' 
+                   AND LOCATE(:MODELOS_VALIDOS, ',' || T0."Model" || ',') > 0 -- Correção aqui
+                   AND IFNULL(T12."StateB", '') <> 'EX'
+                   AND LENGTH(REPLACE(IFNULL(T0."U_ChaveAcesso", ''), ' ', '')) <> 44) THEN
+            error := 18; error_message := 'SAP (NF Entrada) - Chave de acesso inválida (44 dígitos)!';
+        END IF;
+
+    ELSEIF (:object_type = '19') THEN
+        IF EXISTS (SELECT 1 FROM "ORPC" T0 INNER JOIN "RPC1" T1 ON T0."DocEntry" = T1."DocEntry" LEFT JOIN "RPC12" T12 ON T0."DocEntry" = T12."DocEntry" INNER JOIN "OITM" T2 ON T1."ItemCode" = T2."ItemCode"
+                   WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T2."ItemClass" = '2' 
+                   AND LOCATE(:MODELOS_VALIDOS, ',' || T0."Model" || ',') > 0
+                   AND IFNULL(T12."StateB", '') <> 'EX'
+                   AND LENGTH(REPLACE(IFNULL(T0."U_ChaveAcesso", ''), ' ', '')) <> 44) THEN
+            error := 19; error_message := 'SAP (Devolução Compra) - Chave de acesso inválida!';
+        END IF;
+
+    ELSEIF (:object_type = '20') THEN
+        IF EXISTS (SELECT 1 FROM "OPDN" T0 INNER JOIN "PDN1" T1 ON T0."DocEntry" = T1."DocEntry" LEFT JOIN "PDN12" T12 ON T0."DocEntry" = T12."DocEntry" INNER JOIN "OITM" T2 ON T1."ItemCode" = T2."ItemCode"
+                   WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T2."ItemClass" = '2' 
+                   AND LOCATE(:MODELOS_VALIDOS, ',' || T0."Model" || ',') > 0
+                   AND IFNULL(T12."StateB", '') <> 'EX'
+                   AND LENGTH(REPLACE(IFNULL(T0."U_ChaveAcesso", ''), ' ', '')) <> 44) THEN
+            error := 20; error_message := 'SAP (Recebimento) - Chave de acesso inválida!';
+        END IF;
+
+    -- Bloco VENDAS (13, 14, 15)
+    ELSEIF (:object_type = '13') THEN
+        IF EXISTS (SELECT 1 FROM "OINV" T0 INNER JOIN "INV1" T1 ON T0."DocEntry" = T1."DocEntry" LEFT JOIN "INV12" T12 ON T0."DocEntry" = T12."DocEntry" INNER JOIN "OITM" T2 ON T1."ItemCode" = T2."ItemCode"
+                   WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T2."ItemClass" = '2' 
+                   AND LOCATE(:MODELOS_VALIDOS, ',' || T0."Model" || ',') > 0
+                   AND IFNULL(T12."StateS", '') <> 'EX'
+                   AND LENGTH(REPLACE(IFNULL(T0."U_ChaveAcesso", ''), ' ', '')) <> 44) THEN
+            error := 13; error_message := 'SAP (NF Saída) - Chave de acesso inválida!';
+        END IF;
+
+    ELSEIF (:object_type = '14') THEN
+        IF EXISTS (SELECT 1 FROM "ORIN" T0 INNER JOIN "RIN1" T1 ON T0."DocEntry" = T1."DocEntry" LEFT JOIN "RIN12" T12 ON T0."DocEntry" = T12."DocEntry" INNER JOIN "OITM" T2 ON T1."ItemCode" = T2."ItemCode"
+                   WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T2."ItemClass" = '2' 
+                   AND LOCATE(:MODELOS_VALIDOS, ',' || T0."Model" || ',') > 0
+                   AND IFNULL(T12."StateS", '') <> 'EX'
+                   AND LENGTH(REPLACE(IFNULL(T0."U_ChaveAcesso", ''), ' ', '')) <> 44) THEN
+            error := 14; error_message := 'SAP (Devolução Venda) - Chave de acesso inválida!';
+        END IF;
+
+    ELSEIF (:object_type = '15') THEN
+        IF EXISTS (SELECT 1 FROM "ODLN" T0 INNER JOIN "DLN1" T1 ON T0."DocEntry" = T1."DocEntry" LEFT JOIN "DLN12" T12 ON T0."DocEntry" = T12."DocEntry" INNER JOIN "OITM" T2 ON T1."ItemCode" = T2."ItemCode"
+                   WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T2."ItemClass" = '2' 
+                   AND LOCATE(:MODELOS_VALIDOS, ',' || T0."Model" || ',') > 0
+                   AND IFNULL(T12."StateS", '') <> 'EX'
+                   AND LENGTH(REPLACE(IFNULL(T0."U_ChaveAcesso", ''), ' ', '')) <> 44) THEN
+            error := 15; error_message := 'SAP (Entrega) - Chave de acesso inválida!';
+        END IF;
+    END IF;
+
+END IF;
+
