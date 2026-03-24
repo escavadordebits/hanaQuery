@@ -24,7 +24,7 @@ Início - Verifica se a nota do fornecedor está com chave de acesso correta
 IF (:object_type IN ('13', '14', '15', '18', '19', '20') AND :transaction_type IN ('A', 'U')) THEN
     
     -- # MANUTENÇÃO: Mantenha as vírgulas no início e no fim da string para busca exata
-    DECLARE MODELOS_VALIDOS NVARCHAR(100) := ',54,26,39,44,';
+    DECLARE MODELOS_VALIDOS NVARCHAR(100) := ',54,26,66,39,44,';
 
     -- Bloco COMPRAS (18, 19, 20)
     IF (:object_type = '18') THEN
