@@ -1,0 +1,64 @@
+
+-----------------------------------------------------------------------------------------------------------------------
+-- TRAVAS DINÂMICAS IPT
+-----------------------------------------------------------------------------------------------------------------------
+
+IF :object_type IN ('13', '15', '17', '18', '20', '22', '133', '141', '1470000113', '1470000200') 
+   AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+
+    DECLARE v_table_name NVARCHAR(20);
+    DECLARE v_column_name NVARCHAR(50);
+    DECLARE v_msg_erro NVARCHAR(254);
+    DECLARE v_count INT := 0;
+    DECLARE v_sql_dynamic NVARCHAR(2000);
+    
+    -- 1. Mapeia a tabela de linhas
+    v_table_name := CASE :object_type
+        WHEN '13'  THEN 'INV1'
+        WHEN '15'  THEN 'DLN1'
+        WHEN '17'  THEN 'RDR1'
+        WHEN '18'  THEN 'PCH1'
+        WHEN '20'  THEN 'PDN1'
+        WHEN '22'  THEN 'POR1'
+        WHEN '133' THEN 'INV1'
+        WHEN '141' THEN 'PCH1'
+        WHEN '1470000113' THEN 'PRQ1'
+        WHEN '1470000200' THEN 'PRQ1'
+        ELSE ''
+    END;
+
+    IF :v_table_name <> '' THEN
+    
+     
+        DECLARE CURSOR c_travas FOR 
+            SELECT "U_Query", "U_Mensagem" 
+            FROM "@TRAVAS_IPT" 
+            WHERE "U_Ativa" = 'S' 
+            AND "U_CodForm" = :object_type;
+
+        FOR cur_row AS c_travas DO
+            
+            v_column_name := cur_row."U_Query";
+            v_msg_erro    := cur_row."U_Mensagem";
+
+        
+            v_sql_dynamic := 'SELECT COUNT(*) FROM "' || :v_table_name || '" ' ||
+                             'WHERE "DocEntry" = ' || :list_of_cols_val_tab_del || ' ' ||
+                             'AND ("' || :v_column_name || '" IS NULL OR CAST("' || :v_column_name || '" AS NVARCHAR) = '''') ' ||
+                             'AND "ItemCode" IS NOT NULL';
+
+            EXECUTE IMMEDIATE :v_sql_dynamic INTO v_count;
+
+            IF :v_count > 0 THEN
+                error := 1;
+                error_message := 'IPT: ' || LEFT(:v_msg_erro, 190);
+            
+                BREAK; 
+            END IF;
+            
+        END FOR;
+    END IF;
+END IF;
+
+-----------------------------------------------------------------------------------------------------------------------
+
