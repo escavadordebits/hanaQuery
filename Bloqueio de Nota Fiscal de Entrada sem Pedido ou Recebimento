@@ -1,12 +1,12 @@
 -- Bloqueio de Nota Fiscal de Entrada sem Pedido ou Recebimento
 IF :object_type = '18' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 THEN
-    SELECT COUNT(*) INTO cnt
+   
+
+    IF (SELECT COUNT(*) 
     FROM PCH1 T0
     WHERE T0."DocEntry" = :list_of_cols_val_tab_del
-      AND (T0."BaseType" = -1 OR T0."BaseType" IS NULL);
-
-    IF :cnt > 0
+      AND (T0."BaseType" = -1 OR T0."BaseType" IS NULL)) > 0
     THEN
         error := 101;
         error_message := 'Operação bloqueada: A Nota Fiscal deve ser baseada em um Pedido de Compra ou Recebimento.';
